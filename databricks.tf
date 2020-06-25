@@ -40,7 +40,7 @@ provider "databricks" {
 }
 
 resource "databricks_cluster" "cluster" {
-  depends_on              = [azurerm_role_assignment.spdbks]
+  depends_on              = [azurerm_role_assignment.spdbks, null_resource.databricks_token]
   spark_version           = var.databricks_cluster_version
   cluster_name            = "cluster${var.data_lake_name}"
   node_type_id            = var.databricks_cluster_node_type
@@ -70,13 +70,13 @@ resource "databricks_cluster" "cluster" {
 }
 
 resource "databricks_secret_scope" "adls" {
-  depends_on               = [azurerm_role_assignment.spdbks]
+  depends_on               = [azurerm_role_assignment.spdbks, null_resource.databricks_token]
   name                     = "adls"
   initial_manage_principal = "users"
 }
 
 resource "databricks_secret" "client_secret" {
-  depends_on   = [azurerm_role_assignment.spdbks]
+  depends_on   = [azurerm_role_assignment.spdbks, null_resource.databricks_token]
   key          = "client_secret"
   string_value = local.service_principal_secret
   scope        = databricks_secret_scope.adls.name
@@ -84,27 +84,27 @@ resource "databricks_secret" "client_secret" {
 
 resource "databricks_secret_scope" "temp_storage" {
   count                    = local.create_synapse
-  depends_on               = [azurerm_role_assignment.spdbks]
+  depends_on               = [azurerm_role_assignment.spdbks, null_resource.databricks_token]
   name                     = "temp_storage"
   initial_manage_principal = "users"
 }
 
 resource "databricks_secret" "access_key" {
   count        = local.create_synapse
-  depends_on   = [azurerm_role_assignment.spdbks]
+  depends_on   = [azurerm_role_assignment.spdbks, null_resource.databricks_token]
   key          = "access_key"
   string_value = azurerm_storage_account.dbkstemp[count.index].primary_access_key
   scope        = databricks_secret_scope.temp_storage[count.index].name
 }
 
 resource "databricks_secret_scope" "cosmosdb" {
-  depends_on               = [azurerm_role_assignment.spdbks]
+  depends_on               = [azurerm_role_assignment.spdbks, null_resource.databricks_token]
   name                     = "cosmosdb"
   initial_manage_principal = "users"
 }
 
 resource "databricks_secret" "cmdb_master" {
-  depends_on   = [azurerm_role_assignment.spdbks]
+  depends_on   = [azurerm_role_assignment.spdbks, null_resource.databricks_token]
   key          = "master_key"
   string_value = azurerm_cosmosdb_account.cmdb.primary_master_key
   scope        = databricks_secret_scope.cosmosdb.name
@@ -112,20 +112,21 @@ resource "databricks_secret" "cmdb_master" {
 
 resource "databricks_secret_scope" "synapse" {
   count                    = local.create_synapse
-  depends_on               = [azurerm_role_assignment.spdbks]
+  depends_on               = [azurerm_role_assignment.spdbks, null_resource.databricks_token]
   name                     = "synapse"
   initial_manage_principal = "users"
 }
 
 resource "databricks_secret" "synapse_username" {
   count        = local.create_synapse
-  depends_on   = [azurerm_role_assignment.spdbks]
+  depends_on   = [azurerm_role_assignment.spdbks, null_resource.databricks_token]
   key          = "username"
   string_value = "${local.databricks_loader_user}@${azurerm_sql_server.synapse_srv[count.index].name}"
   scope        = databricks_secret_scope.synapse[count.index].name
 }
 
 resource "databricks_secret" "synapse_password" {
+  depends_on   = [azurerm_role_assignment.spdbks, null_resource.databricks_token]
   count        = local.create_synapse
   key          = "password"
   string_value = random_password.sql_databricks_loader[count.index].result
@@ -142,7 +143,7 @@ resource "databricks_azure_adls_gen2_mount" "raw" {
   client_secret_scope    = databricks_secret.client_secret.scope
   client_secret_key      = databricks_secret.client_secret.key
   initialize_file_system = true
-  depends_on             = [azurerm_storage_data_lake_gen2_filesystem.dlfs, azurerm_role_assignment.spsa_sa_adls, azurerm_role_assignment.spdbks]
+  depends_on             = [azurerm_storage_data_lake_gen2_filesystem.dlfs, azurerm_role_assignment.spsa_sa_adls, azurerm_role_assignment.spdbks, null_resource.databricks_token]
 }
 
 resource "databricks_azure_adls_gen2_mount" "clean" {
@@ -155,7 +156,7 @@ resource "databricks_azure_adls_gen2_mount" "clean" {
   client_secret_scope    = databricks_secret.client_secret.scope
   client_secret_key      = databricks_secret.client_secret.key
   initialize_file_system = true
-  depends_on             = [azurerm_storage_data_lake_gen2_filesystem.dlfs, azurerm_role_assignment.spsa_sa_adls, azurerm_role_assignment.spdbks]
+  depends_on             = [azurerm_storage_data_lake_gen2_filesystem.dlfs, azurerm_role_assignment.spsa_sa_adls, azurerm_role_assignment.spdbks, null_resource.databricks_token]
 }
 
 resource "databricks_azure_adls_gen2_mount" "curated" {
@@ -168,11 +169,11 @@ resource "databricks_azure_adls_gen2_mount" "curated" {
   client_secret_scope    = databricks_secret.client_secret.scope
   client_secret_key      = databricks_secret.client_secret.key
   initialize_file_system = true
-  depends_on             = [azurerm_storage_data_lake_gen2_filesystem.dlfs, azurerm_role_assignment.spsa_sa_adls, azurerm_role_assignment.spdbks]
+  depends_on             = [azurerm_storage_data_lake_gen2_filesystem.dlfs, azurerm_role_assignment.spsa_sa_adls, azurerm_role_assignment.spdbks, null_resource.databricks_token]
 }
 
 resource "databricks_token" "token" {
-  depends_on = [azurerm_role_assignment.spdbks]
+  depends_on = [azurerm_role_assignment.spdbks, null_resource.databricks_token]
   comment    = "Terraform Databricks service communication"
 }
 
@@ -184,7 +185,7 @@ resource "databricks_notebook" "spark_setup" {
   overwrite  = false
   mkdirs     = true
   format     = "SOURCE"
-  depends_on = [databricks_secret.access_key, azurerm_role_assignment.spdbks]
+  depends_on = [databricks_secret.access_key, azurerm_role_assignment.spdbks, null_resource.databricks_token]
 
   provisioner "local-exec" {
     command = "${path.module}/files/spark_setup.sh"
