@@ -51,7 +51,7 @@ jobs:
       - name: "go test"
         run: go test -timeout ${{ env.tests_timeout }} ./...
       
-      - name: "cleanup Azure resources"
+      - name: "Cleanup Azure resources"
         if: ${{ always() }}
         run: |
           az group list --subscription $ARM_SUBSCRIPTION_ID --tag "Terratest=$GITHUB_RUN_ID" -o table
