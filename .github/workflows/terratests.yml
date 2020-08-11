@@ -18,15 +18,6 @@ jobs:
       ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
       ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
     steps:
-    
-      - id: slack
-        uses: voxmedia/github-action-slack-notify-build@v1
-        with:
-          channel: ${{ env.slack_channel }}
-          status: STARTED
-          color: warning
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
 
       - name: Get the target branch name
         id: vars
@@ -34,9 +25,6 @@ jobs:
           branch=${{ github.event.client_payload.pull_request.head.ref }}
           if [[ -z "$branch" ]]; then branch="master"; fi
           echo ::set-output name=branch::$branch
-
-      - name: Install databricks provider dependency
-        run: curl https://raw.githubusercontent.com/databrickslabs/terraform-provider-databricks/master/godownloader-databricks-provider.sh | bash -s -- -b $HOME/.terraform.d/plugins
 
       - name: Azure Login
         uses: Azure/login@v1.1
@@ -67,24 +55,4 @@ jobs:
           az group list --subscription $ARM_SUBSCRIPTION_ID --tag "Terratest=$GITHUB_RUN_ID" -o table
           for group in $(az group list --subscription $ARM_SUBSCRIPTION_ID --tag "Terratest=$GITHUB_RUN_ID" --query "[].name" -o tsv | grep -v dbks); do az group delete -y --no-wait --subscription $ARM_SUBSCRIPTION_ID -n $group; done 
 
-      - id: slack-success
-        if: success()
-        uses: voxmedia/github-action-slack-notify-build@v1
-        with:
-          channel: ${{ env.slack_channel }}
-          status: SUCCESS
-          color: good
-          message_id: ${{ steps.slack.outputs.message_id }}
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-
-      - id: slack-failure
-        if: failure()
-        uses: voxmedia/github-action-slack-notify-build@v1
-        with:
-          channel: ${{ env.slack_channel }}
-          status: FAILED
-          color: danger
-          message_id: ${{ steps.slack.outputs.message_id }}
-        env:
-          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          
