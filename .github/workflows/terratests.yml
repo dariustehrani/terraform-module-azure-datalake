@@ -7,7 +7,8 @@ on:
 env:
   tests_timeout: "2h"
   golangci_lint_version: "v1.26"
-  slack_channel: terraform-data-lake-module
+  
+
 jobs:
   terratests:
     name: "Terratests"
@@ -55,4 +56,4 @@ jobs:
           az group list --subscription $ARM_SUBSCRIPTION_ID --tag "Terratest=$GITHUB_RUN_ID" -o table
           for group in $(az group list --subscription $ARM_SUBSCRIPTION_ID --tag "Terratest=$GITHUB_RUN_ID" --query "[].name" -o tsv | grep -v dbks); do az group delete -y --no-wait --subscription $ARM_SUBSCRIPTION_ID -n $group; done 
 
-          
+        
