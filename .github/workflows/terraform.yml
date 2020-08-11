@@ -8,8 +8,8 @@ on:
       - master
 
 defaults:
-   - uses: hashicorp/setup-terraform@v1 
-     with:
+  uses: hashicorp/setup-terraform@v1 
+    with:
       terraform_version: 0.13
 
 jobs:
