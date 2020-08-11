@@ -20,6 +20,7 @@ jobs:
       ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
     steps:
 
+
       - name: Get the target branch name
         id: vars
         run: |
